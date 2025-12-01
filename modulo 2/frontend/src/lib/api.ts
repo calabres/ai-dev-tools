@@ -3,13 +3,24 @@ export interface LeaderboardEntry { username: string; score: number; }
 
 export const api = {
   login: async (username: string): Promise<User> => {
-    return new Promise(resolve => setTimeout(() => resolve({ id: Date.now(), username }), 500));
+    const response = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username })
+    });
+    if (!response.ok) throw new Error('Login failed');
+    return response.json();
   },
   getLeaderboard: async (): Promise<LeaderboardEntry[]> => {
-    return [
-      { username: 'SnakeMaster', score: 300 },
-      { username: 'PythonDev', score: 250 },
-      { username: 'Viper', score: 100 }
-    ];
+    const response = await fetch('/api/leaderboard');
+    if (!response.ok) throw new Error('Failed to fetch leaderboard');
+    return response.json();
+  },
+  submitScore: async (username: string, score: number): Promise<void> => {
+    await fetch('/api/score', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, score })
+    });
   }
 };

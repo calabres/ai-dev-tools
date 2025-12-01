@@ -20,7 +20,11 @@ export default function App() {
     if (screen === 'game' && canvasRef.current) {
       const ctx = canvasRef.current.getContext('2d');
       if (ctx) {
-        const engine = new SnakeEngine(ctx, 400, 400, mode, () => { alert('Game Over!'); setScreen('menu'); }, setScore);
+        const engine = new SnakeEngine(ctx, 400, 400, mode, (finalScore) => {
+          alert(`Game Over! Score: ${finalScore}`);
+          if (user) api.submitScore(user.username, finalScore);
+          setScreen('menu');
+        }, setScore);
         engine.running = true;
         engineRef.current = engine;
         const interval = setInterval(() => engine.step(), 100);
@@ -49,7 +53,7 @@ export default function App() {
         <button onClick={() => { setMode('passthrough'); setScreen('game'); }}>Play: Passthrough</button>
         <button className="secondary" onClick={() => alert('Spectating...')}>Watch Others</button>
         <h3>Leaderboard</h3>
-        <ul>{leaders.map((l, i) => <li key={i}><span>#{i+1} {l.username}</span><span>{l.score}</span></li>)}</ul>
+        <ul>{leaders.map((l, i) => <li key={i}><span>#{i + 1} {l.username}</span><span>{l.score}</span></li>)}</ul>
       </div>
     </div>
   );
