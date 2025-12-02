@@ -22,7 +22,6 @@ services:
     plan: free
     rootDir: modulo 2/frontend
     buildCommand: docker build -t frontend .
-    startCommand: ./entrypoint.sh
     envVars:
       - key: BACKEND_URL
         fromService:
