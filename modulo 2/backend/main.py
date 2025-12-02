@@ -7,11 +7,14 @@ from sqlalchemy import create_engine, Column, Integer, String
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 
-# Configuración de Base de Datos (SQLite)
-SQLALCHEMY_DATABASE_URL = "sqlite:///./sql_app.db"
+import os
+
+# Configuración de Base de Datos
+# Por defecto usa SQLite, pero permite sobreescribir con variable de entorno (para Docker/Postgres)
+SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./sql_app.db")
 
 engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+    SQLALCHEMY_DATABASE_URL
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
