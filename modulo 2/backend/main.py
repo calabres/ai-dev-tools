@@ -1,8 +1,32 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List
 import time
+from sqlalchemy import create_engine, Column, Integer, String
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker, Session
+
+# Configuración de Base de Datos (SQLite)
+SQLALCHEMY_DATABASE_URL = "sqlite:///./sql_app.db"
+
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+Base = declarative_base()
+
+# Modelo de Base de Datos
+class DBLeaderboardEntry(Base):
+    __tablename__ = "leaderboard"
+
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String, index=True)
+    score = Column(Integer)
+
+# Crear tablas
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
@@ -20,7 +44,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Modelos
+# Modelos Pydantic (para la API)
 class UserLogin(BaseModel):
     username: str
 
@@ -36,12 +60,16 @@ class LeaderboardEntry(BaseModel):
     username: str
     score: int
 
-# Datos en memoria (simulando base de datos)
-leaderboard_data = [
-    {"username": "SnakeMaster", "score": 300},
-    {"username": "PythonDev", "score": 250},
-    {"username": "Viper", "score": 100}
-]
+    class Config:
+        from_attributes = True
+
+# Dependencia para obtener la sesión de DB
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 @app.post("/login", response_model=User)
 async def login(user_login: UserLogin):
@@ -50,15 +78,16 @@ async def login(user_login: UserLogin):
     return User(id=int(time.time()), username=user_login.username)
 
 @app.get("/leaderboard", response_model=List[LeaderboardEntry])
-async def get_leaderboard():
-    # Ordenar por puntaje descendente
-    return sorted(leaderboard_data, key=lambda x: x['score'], reverse=True)
+async def get_leaderboard(db: Session = Depends(get_db)):
+    # Obtener todos los registros, ordenar por puntaje descendente
+    entries = db.query(DBLeaderboardEntry).order_by(DBLeaderboardEntry.score.desc()).limit(10).all()
+    return entries
 
 @app.post("/score")
-async def submit_score(submission: ScoreSubmission):
-    leaderboard_data.append(submission.dict())
-    # Mantener solo los top 10 (opcional, pero buena práctica)
-    leaderboard_data.sort(key=lambda x: x['score'], reverse=True)
-    if len(leaderboard_data) > 10:
-        leaderboard_data.pop()
+async def submit_score(submission: ScoreSubmission, db: Session = Depends(get_db)):
+    # Crear nuevo registro
+    db_entry = DBLeaderboardEntry(username=submission.username, score=submission.score)
+    db.add(db_entry)
+    db.commit()
+    db.refresh(db_entry)
     return {"message": "Score submitted successfully"}
