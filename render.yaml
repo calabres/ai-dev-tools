@@ -5,7 +5,6 @@ services:
     region: oregon
     plan: free
     rootDir: homework_module_2
-    dockerContext: homework_module_2
     dockerfilePath: Dockerfile
     envVars:
       - key: PORT
